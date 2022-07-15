@@ -1,16 +1,13 @@
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
-use axum::{
-    handler::Handler,
-    routing::{get, post},
-    Extension, Router,
-};
+use axum::{handler::Handler, routing::get, Extension, Router};
 use http::{header::HeaderName, Request, Version};
 use hyper::Body;
 use sqlx::AnyPool;
 use tower::ServiceBuilder;
 use tower_http::{
+    compression::CompressionLayer,
     trace::{DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
@@ -77,6 +74,8 @@ pub async fn start_server(
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
+                // Enable compression
+                .layer(CompressionLayer::new())
                 // Add the state extension
                 .layer(Extension(state)),
         );
@@ -109,6 +108,8 @@ mod handlers {
     };
     use tracing::{debug, instrument};
 
+    /// Fallback route that looks up the URL in the database and redirects the user to the
+    /// destination if one is found
     #[instrument]
     pub(super) async fn redirect(
         Extension(state): Extension<Arc<State>>,
@@ -139,7 +140,7 @@ WHERE host = ?1 AND path = ?2
                 (StatusCode::MOVED_PERMANENTLY, header_map, "".to_string())
             }
             Ok(None) => (StatusCode::NOT_FOUND, header_map, "".to_string()),
-            Err(err) => (
+            Err(_err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 header_map,
                 "".to_string(),

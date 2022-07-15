@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = { version = "0.5", features = ["headers"] }
+axum = { version = "0.5" }
 clap = { version = "3.2", features = ["derive", "env"] }
 opentelemetry = { version = "0.17", features = ["rt-tokio"], optional = true }
 opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
@@ -26,7 +26,7 @@ rand = "0.8.5"
 hyper = { version = "0.14", features = ["full"] }
 tower = "0.4"
 reqwest = { version = "0.11", features = ["json"] }
-tower-http = { version = "0.3", features = ["trace", "request-id"] }
+tower-http = { version = "0.3", features = ["trace", "request-id", "compression-full"] }
 url = { version = "2", features = ["serde"] }
 
 [features]

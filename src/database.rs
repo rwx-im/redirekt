@@ -1,6 +1,6 @@
 //! Database interface
 
-use sqlx::{migrate, migrate::Migrator, AnyPool};
+use sqlx::{migrate::Migrator, AnyPool};
 
 use crate::Error;
 
