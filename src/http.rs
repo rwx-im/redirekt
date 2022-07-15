@@ -105,7 +105,7 @@ mod handlers {
         TypedHeader(host): TypedHeader<Host>,
         uri: Uri,
     ) -> (StatusCode, String) {
-        let result: (i64,) = sqlx::query_as("SELECT 1")
+        let result: (i64,) = sqlx::query_as("SELECT 1337")
             .fetch_one(&state.pool)
             .await
             .unwrap();
