@@ -38,6 +38,10 @@ async fn main() -> Result<()> {
     let pool = database::open(&opts.database_url).await?;
     debug!(kind = ?pool.any_kind(), "connected to database");
 
+    debug!("running database migrations");
+    database::migrate(pool.clone()).await?;
+    debug!("database migration complete");
+
     info!("starting http server");
     let handle = axum_server::Handle::new();
 

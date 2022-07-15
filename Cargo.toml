@@ -18,25 +18,23 @@ tracing-opentelemetry = { version = "0.17", optional = true }
 miette = { version = "4.7", features = ["fancy"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 axum-server = "0.4.0"
-sqlx = { version = "0.5", features = ["runtime-tokio-rustls", "any"] }
+sqlx = { version = "0.5", features = ["runtime-tokio-rustls", "any", "migrate"] }
 ulid = "0.6.0"
 http = "0.2"
+serde = { version = "1.0", features = ["derive"] }
 rand = "0.8.5"
 hyper = { version = "0.14", features = ["full"] }
 tower = "0.4"
 reqwest = { version = "0.11", features = ["json"] }
 tower-http = { version = "0.3", features = ["trace", "request-id"] }
+url = { version = "2", features = ["serde"] }
 
 [features]
 default = ["tracing", "tracing-jaeger", "sqlite"]
 tracing = ["dep:tracing-opentelemetry", "dep:opentelemetry", "dep:opentelemetry-jaeger"]
 tracing-jaeger = ["dep:opentelemetry-jaeger", "tracing"]
 tracing-datadog = ["dep:opentelemetry-datadog", "tracing"]
-mysql = ["sqlx/mysql"]
-postgres = ["sqlx/postgres"]
 sqlite = ["sqlx/sqlite"]
-mssql = ["sqlx/mssql"]
-all-databases = ["mysql", "sqlite", "postgres", "mssql"]
 
 [profile.release]
 lto = "fat"

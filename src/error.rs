@@ -25,4 +25,7 @@ pub enum Error {
     #[error("Listening address is invalid")]
     #[diagnostic(code(metastatus::invalid_address_error))]
     InvalidListeningAddress(#[source] std::io::Error),
+
+    #[error("Database migration failed")]
+    DatabaseMigrationError(#[source] sqlx::migrate::MigrateError),
 }

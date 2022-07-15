@@ -1,8 +1,10 @@
 //! Database interface
 
-use sqlx::AnyPool;
+use sqlx::{migrate, migrate::Migrator, AnyPool};
 
 use crate::Error;
+
+static MIGRATOR: Migrator = sqlx::migrate!();
 
 pub async fn open(url: &str) -> Result<AnyPool, Error> {
     let pool = AnyPool::connect(url)
@@ -10,4 +12,11 @@ pub async fn open(url: &str) -> Result<AnyPool, Error> {
         .map_err(Error::DatabaseOpenError)?;
 
     Ok(pool)
+}
+
+pub async fn migrate(pool: AnyPool) -> Result<(), Error> {
+    MIGRATOR
+        .run(&pool)
+        .await
+        .map_err(Error::DatabaseMigrationError)
 }

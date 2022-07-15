@@ -1,7 +1,11 @@
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
-use axum::{handler::Handler, routing::get, Extension, Router};
+use axum::{
+    handler::Handler,
+    routing::{get, post},
+    Extension, Router,
+};
 use http::{header::HeaderName, Request, Version};
 use hyper::Body;
 use sqlx::AnyPool;
@@ -15,6 +19,7 @@ use tracing::{debug, instrument, trace};
 use crate::cli::HttpOpts;
 use crate::Error;
 
+mod api;
 mod request_id;
 
 #[derive(Debug, Clone)]
@@ -47,10 +52,15 @@ pub async fn start_server(
     let state = Arc::new(State { pool });
     let x_request_id = HeaderName::from_static("x-request-id");
 
-    // build our application with a route
+    // Build API routes
+    let api_router = api::router();
+
+    // Build application routes
     let app = Router::new()
         .route("/healthz", get(|| async { "ok" }))
+        .nest("/api/v1", api_router)
         .fallback(handlers::redirect.into_service())
+        // Add a tracing layer that adds standard tags, unlike tower's tracing layer
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUlid::default())
@@ -67,10 +77,10 @@ pub async fn start_server(
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
+                // Add the state extension
                 .layer(Extension(state)),
         );
 
-    // run our app with hyper
     let addr = (opts.host.clone(), opts.port)
         .to_socket_addrs()
         .map_err(Error::InvalidListeningAddress)?
@@ -93,26 +103,47 @@ mod handlers {
 
     use super::State;
     use axum::{
-        extract::{Extension, TypedHeader},
-        headers::Host,
-        http::{StatusCode, Uri},
+        extract::{Extension, Host},
+        http::{header, HeaderMap, HeaderValue, StatusCode, Uri},
+        response::IntoResponse,
     };
-    use tracing::instrument;
+    use tracing::{debug, instrument};
 
     #[instrument]
     pub(super) async fn redirect(
         Extension(state): Extension<Arc<State>>,
-        TypedHeader(host): TypedHeader<Host>,
+        host: Host,
         uri: Uri,
-    ) -> (StatusCode, String) {
-        let result: (i64,) = sqlx::query_as("SELECT 1")
-            .fetch_one(&state.pool)
-            .await
-            .unwrap();
+    ) -> impl IntoResponse {
+        debug!("redirecting");
 
-        (
-            StatusCode::OK,
-            format!("result: {}\nhost: {}\nuri: {:?}", result.0, host, uri),
+        let destination = sqlx::query_as::<_, (String,)>(
+            r#"
+SELECT destination
+FROM redirekt_links
+WHERE host = ?1 AND path = ?2
+            "#,
         )
+        .bind(host.0)
+        .bind(uri.path())
+        .fetch_optional(&state.pool)
+        .await;
+
+        let mut header_map = HeaderMap::new();
+
+        debug!(?destination);
+
+        match destination {
+            Ok(Some(url)) => {
+                header_map.insert(header::LOCATION, HeaderValue::from_str(&url.0).unwrap());
+                (StatusCode::MOVED_PERMANENTLY, header_map, "".to_string())
+            }
+            Ok(None) => (StatusCode::NOT_FOUND, header_map, "".to_string()),
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                header_map,
+                "".to_string(),
+            ),
+        }
     }
 }

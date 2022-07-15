@@ -1,0 +1,9 @@
+CREATE TABLE redirekt_links (
+  id INTEGER NOT NULL PRIMARY KEY,
+  host VARCHAR(253) NOT NULL,
+  path VARCHAR(2048) NOT NULL,
+  created_at INTEGER DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  destination VARCHAR DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE UNIQUE INDEX redirekt_links_host_path_idx ON redirekt_links (host, path);
