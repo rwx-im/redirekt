@@ -44,6 +44,7 @@ jobs:
       with:
         token: ${{ github.token }}
         args: --all-features
+        name: clippy ${{ matrix.rust }}
 
   test:
     name: Test
@@ -53,10 +54,6 @@ jobs:
     strategy:
       matrix:
         rust: [stable, nightly]
-        features:
-        - [sqlite]
-        - [default]
-        - [default, all-databases]
     steps:
     - name: Checkout source code
       uses: actions/checkout@v2
@@ -82,12 +79,12 @@ jobs:
     - name: Run build
       env:
         RUSTFLAGS: -C instrument-coverage
-      run: cargo build --no-default-features --features "${{ join(matrix.features, ',') }}"
+      run: cargo build --all-features
     - name: Run tests
       env:
         RUSTFLAGS: -C instrument-coverage
         LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
-      run: cargo test --no-default-features --features "${{ join(matrix.features, ',') }}"
+      run: cargo test --all-features
     - name: Download grcov
       run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
     - name: Parse and aggregate coverage report
@@ -101,3 +98,4 @@ jobs:
       uses: codecov/codecov-action@v2
       with:
         files: ./lcov.info
+        flags: rust-${{ matrix.rust }}
